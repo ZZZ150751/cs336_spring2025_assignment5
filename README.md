@@ -56,10 +56,8 @@
 
 * **辅助方法 2：Token 熵计算函数**
   编写一个函数，用于计算模型在预测下一个 token 时的信息熵。输入为模型的 logits（形状为 `[batch_size, seq_len, vocab_size]`），输出为每个位置预测分布的熵（形状为 `[batch_size, seq_len]`）。
-  实现过程：先对 logits 在词表维度应用 $\log\text{sumexp}$ 运算，得到 $\log\sum_{j} e^{\text{logits}_j}$，进而计算对数概率：
-  $$\log p_i = \text{logits}_i - \log\sum_{j}e^{\text{logits}_j}$$
-  这等价于 $\log\text{softmax}(\text{logits})$。随后通过 softmax 得到概率分布 $p_i$，计算各位置的熵并对词表维度求和：
-  $$H = -\sum_{i}p_i\cdot\log p_i$$
+  实现过程：先对 logits 在词表维度应用 $\log\text{sumexp}$ 运算，得到 $\log\sum_{j} e^{\text{logits}_j}$，进而计算对数概率，随后通过 softmax 得到概率分布 ，并计算各位置的熵并对词表维度求和。
+
 
 * **辅助方法 3：对数概率提取函数**
   该函数接收辅助方法 1 生成的 `input_ids` 和 `labels`、HuggingFace 模型以及一个布尔值（是否返回熵）。
