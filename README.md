@@ -64,7 +64,9 @@
 * **辅助方法 3：对数概率提取函数**
   该函数接收辅助方法 1 生成的 `input_ids` 和 `labels`、HuggingFace 模型以及一个布尔值（是否返回熵）。
   通过模型前向传播获取 logits ，进而计算：
-  $\log[\text{softmax}(f_\theta(\text{input\_ids}))]$
+  
+  $$\log[\text{softmax}(f_\theta(\text{input\_ids}))]$$
+  
   根据 `labels` 提取对应 token 的对数概率值。若布尔值为真，则同时调用辅助方法 2 返回每个 token 的熵。
 
 * **辅助方法 4：掩码归一化函数**
