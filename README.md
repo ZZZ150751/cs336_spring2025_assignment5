@@ -48,27 +48,27 @@
 ### 2.1 辅助方法
 
 * **辅助方法 1：分词与掩码处理函数**
-    编写一个处理提示词（prompt）和输出（output）的函数。该函数接收提示词和输出字符串，利用分词器处理后返回一个字典，包含三个字段：
-    1. `input_ids`: 合并后的提示词和输出分词序列（截断最后一个 token）。
-    2. `labels`: 对应的目标标签序列（去掉第一个 token）。
-    3. `response_mask`: 针对 `labels` 中响应部分的掩码（仅对 `<answer>` 部分标记为 1）。
-    *(注：在 `test/conftest.py` 的第 213 行，需将模型 ID 修改为 `Qwen/Qwen2.5-Math-1.5B`。)*
+  编写一个处理提示词（prompt）和输出（output）的函数。该函数接收提示词和输出字符串，利用分词器处理后返回一个字典，包含三个字段：
+  1. `input_ids`: 合并后的提示词和输出分词序列（截断最后一个 token）。
+  2. `labels`: 对应的目标标签序列（去掉第一个 token）。
+  3. `response_mask`: 针对 `labels` 中响应部分的掩码（仅对 `<answer>` 部分标记为 1）。
+  *(注：在 `test/conftest.py` 的第 213 行，需将模型 ID 修改为 `Qwen/Qwen2.5-Math-1.5B`。)*
 
 * **辅助方法 2：Token 熵计算函数**
-    编写一个函数，用于计算模型在预测下一个 token 时的信息熵。输入为模型的 logits（形状为 `[batch_size, seq_len, vocab_size]`），输出为每个位置预测分布的熵（形状为 `[batch_size, seq_len]`）。
-    实现过程：先对 logits 在词表维度应用 $\log\text{sumexp}$ 运算，得到 $\log\sum_{j} e^{\text{logits}_j}$，进而计算对数概率：
-    $$\log p_i = \text{logits}_i - \log\sum_{j}e^{\text{logits}_j}$$
-    这等价于 $\log\text{softmax}(\text{logits})$。随后通过 softmax 得到概率分布 $p_i$，计算各位置的熵并对词表维度求和：
-    $$H = -\sum_{i}p_i\cdot\log p_i$$
+  编写一个函数，用于计算模型在预测下一个 token 时的信息熵。输入为模型的 logits（形状为 `[batch_size, seq_len, vocab_size]`），输出为每个位置预测分布的熵（形状为 `[batch_size, seq_len]`）。
+  实现过程：先对 logits 在词表维度应用 $\log\text{sumexp}$ 运算，得到 $\log\sum_{j} e^{\text{logits}_j}$，进而计算对数概率：
+  $$\log p_i = \text{logits}_i - \log\sum_{j}e^{\text{logits}_j}$$
+  这等价于 $\log\text{softmax}(\text{logits})$。随后通过 softmax 得到概率分布 $p_i$，计算各位置的熵并对词表维度求和：
+  $$H = -\sum_{i}p_i\cdot\log p_i$$
 
 * **辅助方法 3：对数概率提取函数**
-    该函数接收辅助方法 1 生成的 `input_ids` 和 `labels`、HuggingFace 模型以及一个布尔值（是否返回熵）。
-    通过模型前向传播获取 logits $f_\theta(\text{input\_ids})$，进而计算：
-    $$\log[\text{softmax}(f_\theta(\text{input\_ids}))]$$
-    根据 `labels` 提取对应 token 的对数概率值，即 $\log p_\theta(y|x) = \log[\text{softmax}(f_\theta(\text{input\_ids}))]_y$。若布尔值为真，则同时调用辅助方法 2 返回每个 token 的熵。
+  该函数接收辅助方法 1 生成的 `input_ids` 和 `labels`、HuggingFace 模型以及一个布尔值（是否返回熵）。
+  通过模型前向传播获取 logits $f_\theta(\text{input\_ids})$，进而计算：
+  $$\log[\text{softmax}(f_\theta(\text{input\_ids}))]$$
+  根据 `labels` 提取对应 token 的对数概率值，即 $\log p_\theta(y|x) = \log[\text{softmax}(f_\theta(\text{input\_ids}))]_y$。若布尔值为真，则同时调用辅助方法 2 返回每个 token 的熵。
 
 * **辅助方法 4：掩码归一化函数**
-    接收一个张量、同形状的掩码、归一化除数及维度，返回归一化后的张量。实现时通过 `tensor * mask` 后调用 `torch.sum` 进行求和，确保仅计算掩码标记为 1 的有效元素。
+  接收一个张量、同形状的掩码、归一化除数及维度，返回归一化后的张量。实现时通过 `tensor * mask` 后调用 `torch.sum` 进行求和，确保仅计算掩码标记为 1 的有效元素。
 
 
 在实现下一个辅助方法之前，我们先介绍一下 **梯度累积技术**：梯度累积的基本思想是，我们不在每个批次之后立即更新模型权重（即不立刻执行优化器步骤），而是在执行梯度更新步骤之前，将多个批次的梯度累积起来。其原因在于：受限于硬件显存，这种技术允许我们在训练中变相使用更大的有效批次大小。
